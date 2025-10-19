@@ -31,7 +31,7 @@ def create_app():
     # Remove custom session name to use default 'session'
     
     # Register blueprints
-    from routes.api import api_bp
+    from backend.routes.api import api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
     
     # Health check endpoint
