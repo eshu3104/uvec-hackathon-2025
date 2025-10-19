@@ -1,46 +1,68 @@
-# Party Music App
+# 🎧 VOTIFY — The Collaborative Spotify Queue
 
-A collaborative music party app where users can create rooms, vote on songs, and control the playlist together.
+> _“Where everyone gets a say in the music — not just the one holding the aux.”_
 
-## Project Structure
+Votify turns group listening into an **interactive, real-time Spotify experience**.  
+Users can create or join a room, **vote on song recommendations**, and see the most-voted track added to the queue instantly.  
+Built by **Team Naan Stop Jam** for **UVEC Hackathon 2025**.
 
-```
-├── backend/           # Flask backend API
-│   ├── routes/       # API routes
-│   └── utils/        # Utility functions (Spotify OAuth)
-├── frontend/         # React frontend
-└── venv/            # Python virtual environment
-```
+---
 
-## Quick Start
+## 🚀 Features
 
-### Backend
-```bash
-source venv/bin/activate
-python run.py
-```
+- 🔐 **Spotify Login** — Simple OAuth authentication for the host.  
+- 🏠 **Create / Join Lobby** — Shareable code system (Kahoot-style).  
+- 🗳️ **Live Voting** — Users vote between 3 real-time song options.  
+- 🎧 **Dynamic Queue** — Top-voted song automatically plays next.  
+- ⏱️ **Smart Refresh** — New recommendations appear 30s before the current song ends.  
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+---
 
-## Features
+## ⚙️ Tech Stack
 
-- Spotify OAuth authentication
-- Create/join party rooms
-- Collaborative playlist creation
-- Song voting system
-- Real-time updates
+| Layer | Tool | Purpose |
+|-------|------|----------|
+| 🎨 Frontend | React + Tailwind (Lovable AI) | Clean responsive UI |
+| ⚙️ Backend | Flask | Spotify API integration |
+| 🎵 API | Spotify Web API | Fetch & queue songs |
 
-## Environment Variables
+---
 
-Create a `.env` file with:
-```
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
-SPOTIFY_REDIRECT_URI=http://localhost:5000/api/spotify/callback
-SECRET_KEY=your_secret_key
-```
+## 💡 How It Works
+
+1️⃣ Host logs in with Spotify  
+2️⃣ Creates a lobby → code generated  
+3️⃣ Friends join using that code  
+4️⃣ Everyone votes between 3 recommendations  
+5️⃣ The top-voted song gets queued next automatically  
+
+---
+
+## 🔮 Steps Ahead
+
+- 📱 Join via QR or link  
+- 🎉 Add emoji reactions while voting  
+- 🧑‍🤝‍🧑 Display usernames inside lobby  
+- 🎵 Auto-create playlist at session end  
+- 🤪 **Party Chaos Mode:** random wild-card track every hour  
+
+---
+
+## 👥 Team — Naan Stop Jam
+ 
+Srinivas  - Backend Developer  
+Eshupriye  - Backend Developer  
+Abin K  - Frontend Developer  
+Farhan  - Project Lead / Integrator  
+
+---
+
+## 🧾 Hackathon Info
+
+🏁 **UVEC Hackathon 2025**  
+🕒 Built in under 7 hours  
+🎯 Goal: Make music listening **collaborative, social, and fun**
+
+---
+
+> 🎶 _Because the best parties aren’t about one playlist — they’re about everyone’s vibe._
