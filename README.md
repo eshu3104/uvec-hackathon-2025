@@ -1,6 +1,6 @@
 # Flask Backend API
 
-A Flask-based REST API backend for the UVEC Hackathon 2025 project.
+A Flask-based REST API backend for the UVEC Hackathon 2025 project..
 
 ## Project Structure
 
