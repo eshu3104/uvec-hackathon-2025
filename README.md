@@ -1,56 +1,29 @@
-🎧 Votify — The Collaborative Spotify Queue
+# 🎧 VOTIFY — The Collaborative Spotify Queue  
 
-Votify transforms group music sessions into an interactive experience by letting everyone vote for what plays next. Built during a hackathon by Team Naan Stop Jam, it makes Spotify listening social, fair, and fun.
+> _“Where everyone gets a say in the music — not just the one holding the aux.”_  
 
-🚀 Features
+Votify turns every Spotify session into a **live, interactive experience**.  
+Users can **vote for the next song**, see real-time results, and keep the party flowing together.  
+Built during **Hackathon 2025** by **Team Naan Stop Jam**.  
 
-Spotify Login – Host logs in with Spotify to create a session.
+---
 
-Create / Join Lobby – Share or enter a code (like Kahoot).
+## 🚀 Features  
 
-Real-Time Voting – Vote between 3 live song recommendations.
+✨ **Spotify Login** — Secure Spotify OAuth for hosts.  
+🎉 **Create / Join Lobby** — Generate or enter a code (just like Kahoot).  
+🗳️ **Live Voting System** — Choose from 3 song recommendations each round.  
+🎧 **Dynamic Queue** — Winning track auto-plays next in real time.  
+⏱️ **Smart Refresh** — Next song suggestions appear **30 seconds** before the current track ends.  
 
-Dynamic Queue – The top-voted track auto-plays next.
+---
 
-Smart Refresh – New songs appear 30s before the current one ends.
+## 🧠 Tech Stack  
 
-🧠 Tech Stack
-
-Frontend: React + TailwindCSS (Lovable AI)
-
-Backend: Flask
-
-Database: Firebase Realtime DB
-
-API: Spotify Web API
-
-Realtime: Socket.io
-
-🧩 How It Works
-
-Host logs in with Spotify and creates a lobby.
-
-A code is generated — others join using it.
-
-Everyone votes between 3 suggested songs.
-
-The winning track gets queued instantly on Spotify.
-
-🔮 Future Steps
-
-QR code or link-based joining
-
-Emoji reactions during voting
-
-Show user names inside lobbies
-
-Playlist auto-save at session end
-
-Fun “Party Chaos Mode” (random surprise songs 😆)
-
-👥 Team Naan Stop Jam
-
-Abin 
-Eshu
-Srinivass
-Farhan
+| Layer | Tool | Purpose |
+|-------|------|----------|
+| 🎨 **Frontend** | React + TailwindCSS (Lovable AI) | Beautiful, responsive UI |
+| ⚙️ **Backend** | Flask | API handling + Spotify integration |
+| 🗄️ **Database** | Firebase Realtime DB | Store votes & lobby data |
+| 🎵 **API** | Spotify Web API | Fetch & queue songs |
+| 🔁
