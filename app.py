@@ -10,12 +10,20 @@ def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
     
-    # Configure CORS
-    CORS(app)
+    # Configure CORS for session-based authentication
+    CORS(app, 
+         origins=['http://localhost:8080', 'http://127.0.0.1:8080'],
+         supports_credentials=True)
     
     # Configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
     app.config['DEBUG'] = os.getenv('DEBUG', 'False').lower() == 'true'
+    
+    # Session configuration for cross-origin authentication
+    app.config['SESSION_COOKIE_DOMAIN'] = 'localhost'
+    app.config['SESSION_COOKIE_HTTPONLY'] = False  # Allow JavaScript access for debugging
+    app.config['SESSION_COOKIE_SECURE'] = False    # Allow HTTP in development
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Allow cross-origin requests
     
     # Register blueprints
     from routes.api import api_bp

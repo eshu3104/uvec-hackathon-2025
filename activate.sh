@@ -5,7 +5,7 @@ echo "Virtual environment activated!"
 echo "To deactivate, run: deactivate"
 echo ""
 echo "Installing dependencies..."
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 echo ""
 echo "Setup complete! You can now run:"
-echo "  python run.py"
+echo "  python3 run.py"

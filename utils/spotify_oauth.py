@@ -121,6 +121,22 @@ class SpotifyOAuth:
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to get recently played tracks: {str(e)}")
     
+    def get_user_playlists(self, access_token, limit=20, offset=0):
+        """Get user's playlists"""
+        url = 'https://api.spotify.com/v1/me/playlists'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        params = {
+            'limit': limit,
+            'offset': offset
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to get user playlists: {str(e)}")
+    
     def is_token_valid(self, access_token):
         """Check if access token is valid by making a simple API call"""
         try:
