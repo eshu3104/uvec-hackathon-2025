@@ -1,46 +1,56 @@
-# Party Music App
+🎧 Votify — The Collaborative Spotify Queue
 
-A collaborative music party app where users can create rooms, vote on songs, and control the playlist together.
+Votify transforms group music sessions into an interactive experience by letting everyone vote for what plays next. Built during a hackathon by Team Naan Stop Jam, it makes Spotify listening social, fair, and fun.
 
-## Project Structure
+🚀 Features
 
-```
-├── backend/           # Flask backend API
-│   ├── routes/       # API routes
-│   └── utils/        # Utility functions (Spotify OAuth)
-├── frontend/         # React frontend
-└── venv/            # Python virtual environment
-```
+Spotify Login – Host logs in with Spotify to create a session.
 
-## Quick Start
+Create / Join Lobby – Share or enter a code (like Kahoot).
 
-### Backend
-```bash
-source venv/bin/activate
-python run.py
-```
+Real-Time Voting – Vote between 3 live song recommendations.
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Dynamic Queue – The top-voted track auto-plays next.
 
-## Features
+Smart Refresh – New songs appear 30s before the current one ends.
 
-- Spotify OAuth authentication
-- Create/join party rooms
-- Collaborative playlist creation
-- Song voting system
-- Real-time updates
+🧠 Tech Stack
 
-## Environment Variables
+Frontend: React + TailwindCSS (Lovable AI)
 
-Create a `.env` file with:
-```
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
-SPOTIFY_REDIRECT_URI=http://localhost:5000/api/spotify/callback
-SECRET_KEY=your_secret_key
-```
+Backend: Flask
+
+Database: Firebase Realtime DB
+
+API: Spotify Web API
+
+Realtime: Socket.io
+
+🧩 How It Works
+
+Host logs in with Spotify and creates a lobby.
+
+A code is generated — others join using it.
+
+Everyone votes between 3 suggested songs.
+
+The winning track gets queued instantly on Spotify.
+
+🔮 Future Steps
+
+QR code or link-based joining
+
+Emoji reactions during voting
+
+Show user names inside lobbies
+
+Playlist auto-save at session end
+
+Fun “Party Chaos Mode” (random surprise songs 😆)
+
+👥 Team Naan Stop Jam
+
+Abin 
+Eshu
+Srinivass
+Farhan
