@@ -136,12 +136,23 @@ def spotify_profile():
     except Exception as e:
         return jsonify({'error': f'Failed to get profile: {str(e)}'}), 500
 
-@api_bp.route('/spotify/top-tracks', methods=['GET'])
+@api_bp.route('/spotify/top-tracks', methods=['GET', 'POST'])
 def spotify_top_tracks():
     """Get user's top tracks"""
-    access_token = session.get('spotify_access_token')
+    print(f"Top tracks called - session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    # Try to get access token from request body first, then session
+    data = request.get_json() or {}
+    access_token = data.get('access_token') or session.get('spotify_access_token')
+    
+    print(f"Access token from request body: {data.get('access_token', 'None')[:20] if data.get('access_token') else 'None'}...")
+    print(f"Access token from session: {session.get('spotify_access_token', 'None')[:20] if session.get('spotify_access_token') else 'None'}...")
+    print(f"Final access token: {access_token[:20] if access_token else 'None'}...")
     
     if not access_token:
+        print("No access token found in request body or session")
         return jsonify({'error': 'Not authenticated with Spotify'}), 401
     
     # Get query parameters
@@ -158,24 +169,11 @@ def spotify_top_tracks():
     try:
         spotify_oauth = SpotifyOAuth()
         
-        # Check if token is still valid, refresh if needed
-        if not spotify_oauth.is_token_valid(access_token):
-            refresh_token = session.get('spotify_refresh_token')
-            if refresh_token:
-                try:
-                    token_data = spotify_oauth.refresh_access_token(refresh_token)
-                    access_token = token_data['access_token']
-                    session['spotify_access_token'] = access_token
-                    if 'refresh_token' in token_data:
-                        session['spotify_refresh_token'] = token_data['refresh_token']
-                except:
-                    return jsonify({'error': 'Session expired, please login again'}), 401
-            else:
-                return jsonify({'error': 'Session expired, please login again'}), 401
-        
+        print("Getting top tracks...")
         top_tracks = spotify_oauth.get_top_tracks(access_token, time_range, limit)
         return jsonify(top_tracks)
     except Exception as e:
+        print(f"Error getting top tracks: {str(e)}")
         return jsonify({'error': f'Failed to get top tracks: {str(e)}'}), 500
 
 @api_bp.route('/spotify/recently-played', methods=['GET'])
@@ -483,3 +481,8 @@ def spotify_logout():
     session.pop('spotify_token_expires_in', None)
     
     return jsonify({'message': 'Successfully logged out from Spotify'})
+
+@api_bp.route('/test-post', methods=['POST'])
+def test_post():
+    """Test POST endpoint"""
+    return jsonify({'message': 'POST works!'})

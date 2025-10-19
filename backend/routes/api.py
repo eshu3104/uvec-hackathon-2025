@@ -8,9 +8,10 @@ import traceback
 
 api_bp = Blueprint('api', __name__)
 
-# In-memory storage for rooms
+# In-memory storage for rooms, participants, and votes
 rooms = {}
 participants = {}
+votes = {}  # room_code -> {track_id: vote_count}
 
 @api_bp.before_request
 def show_session():
@@ -136,12 +137,23 @@ def spotify_profile():
     except Exception as e:
         return jsonify({'error': f'Failed to get profile: {str(e)}'}), 500
 
-@api_bp.route('/spotify/top-tracks', methods=['GET'])
+@api_bp.route('/spotify/top-tracks', methods=['GET', 'POST'])
 def spotify_top_tracks():
     """Get user's top tracks"""
-    access_token = session.get('spotify_access_token')
+    print(f"Top tracks called - session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    # Try to get access token from request body first, then session
+    data = request.get_json() or {}
+    access_token = data.get('access_token') or session.get('spotify_access_token')
+    
+    print(f"Access token from request body: {data.get('access_token', 'None')[:20] if data.get('access_token') else 'None'}...")
+    print(f"Access token from session: {session.get('spotify_access_token', 'None')[:20] if session.get('spotify_access_token') else 'None'}...")
+    print(f"Final access token: {access_token[:20] if access_token else 'None'}...")
     
     if not access_token:
+        print("No access token found in request body or session")
         return jsonify({'error': 'Not authenticated with Spotify'}), 401
     
     # Get query parameters
@@ -158,24 +170,11 @@ def spotify_top_tracks():
     try:
         spotify_oauth = SpotifyOAuth()
         
-        # Check if token is still valid, refresh if needed
-        if not spotify_oauth.is_token_valid(access_token):
-            refresh_token = session.get('spotify_refresh_token')
-            if refresh_token:
-                try:
-                    token_data = spotify_oauth.refresh_access_token(refresh_token)
-                    access_token = token_data['access_token']
-                    session['spotify_access_token'] = access_token
-                    if 'refresh_token' in token_data:
-                        session['spotify_refresh_token'] = token_data['refresh_token']
-                except:
-                    return jsonify({'error': 'Session expired, please login again'}), 401
-            else:
-                return jsonify({'error': 'Session expired, please login again'}), 401
-        
+        print("Getting top tracks...")
         top_tracks = spotify_oauth.get_top_tracks(access_token, time_range, limit)
         return jsonify(top_tracks)
     except Exception as e:
+        print(f"Error getting top tracks: {str(e)}")
         return jsonify({'error': f'Failed to get top tracks: {str(e)}'}), 500
 
 @api_bp.route('/spotify/recently-played', methods=['GET'])
@@ -341,44 +340,63 @@ def create_room():
 @api_bp.route('/join-room/<room_code>', methods=['POST'])
 def join_room(room_code):
     """Join an existing room"""
-    room_code = room_code.upper()
+    print(f"Join room called - room_code: {room_code}")
+    print(f"Session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
     
-    if room_code not in rooms:
-        return jsonify({'error': 'Room not found'}), 404
-    
-    room = rooms[room_code]
-    
-    if room['status'] != 'active':
-        return jsonify({'error': 'Room is not active'}), 400
-    
-    # Generate a simple participant ID (since non-Spotify users don't need accounts)
-    participant_id = f"guest_{len(participants.get(room_code, [])) + 1}"
-    
-    # Add participant
-    if room_code not in participants:
-        participants[room_code] = []
-    
-    participant = {
-        'user_id': participant_id,
-        'display_name': f"Guest {len(participants[room_code])}",
-        'joined_at': datetime.utcnow().isoformat(),
-        'is_host': False
-    }
-    
-    participants[room_code].append(participant)
-    rooms[room_code]['participant_count'] = len(participants[room_code])
-    
-    return jsonify({
-        'message': 'Successfully joined room',
-        'room_code': room_code,
-        'participant': participant,
-        'room_info': {
-            'code': room['code'],
-            'host': room['host_display_name'],
-            'participant_count': room['participant_count'],
-            'created_at': room['created_at']
+    try:
+        room_code = room_code.upper()
+        print(f"Looking for room: {room_code}")
+        print(f"Available rooms: {list(rooms.keys())}")
+        
+        if room_code not in rooms:
+            print(f"Room {room_code} not found")
+            return jsonify({'error': 'Room not found'}), 404
+        
+        room = rooms[room_code]
+        print(f"Found room: {room}")
+        
+        if room['status'] != 'active':
+            print(f"Room {room_code} is not active, status: {room['status']}")
+            return jsonify({'error': 'Room is not active'}), 400
+        
+        # Generate a simple participant ID (since non-Spotify users don't need accounts)
+        participant_id = f"guest_{len(participants.get(room_code, [])) + 1}"
+        print(f"Generated participant_id: {participant_id}")
+        
+        # Add participant
+        if room_code not in participants:
+            participants[room_code] = []
+        
+        participant = {
+            'user_id': participant_id,
+            'display_name': f"Guest {len(participants[room_code])}",
+            'joined_at': datetime.utcnow().isoformat(),
+            'is_host': False
         }
-    }), 200
+        
+        participants[room_code].append(participant)
+        rooms[room_code]['participant_count'] = len(participants[room_code])
+        
+        print(f"Successfully added participant: {participant}")
+        print(f"Room now has {rooms[room_code]['participant_count']} participants")
+        
+        return jsonify({
+            'message': 'Successfully joined room',
+            'room_code': room_code,
+            'participant': participant,
+            'room_info': {
+                'code': room['code'],
+                'host': room['host_display_name'],
+                'participant_count': room['participant_count'],
+                'created_at': room['created_at']
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"Error joining room: {str(e)}")
+        return jsonify({'error': f'Failed to join room: {str(e)}'}), 500
 
 @api_bp.route('/room/<room_code>/status', methods=['GET'])
 def get_room_status(room_code):
@@ -474,6 +492,310 @@ def end_room(room_code):
         
     except Exception as e:
         return jsonify({'error': f'Failed to end room: {str(e)}'}), 500
+
+@api_bp.route('/spotify/currently-playing', methods=['GET', 'POST'])
+def spotify_currently_playing():
+    """Get currently playing track with full details"""
+    print(f"Currently playing called - session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    # Try to get access token from request body first, then session
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        access_token = data.get('access_token') or session.get('spotify_access_token')
+        print(f"Access token from request body: {data.get('access_token', 'None')[:20] if data.get('access_token') else 'None'}...")
+    else:
+        data = {}
+        access_token = session.get('spotify_access_token')
+        print(f"Access token from request body: None...")
+    
+    print(f"Access token from session: {session.get('spotify_access_token', 'None')[:20] if session.get('spotify_access_token') else 'None'}...")
+    print(f"Final access token: {access_token[:20] if access_token else 'None'}...")
+    
+    if not access_token:
+        print("No access token found in request body or session")
+        return jsonify({'error': 'Not authenticated with Spotify'}), 401
+    
+    try:
+        spotify_oauth = SpotifyOAuth()
+        
+        print("Getting currently playing track...")
+        playback_state = spotify_oauth.get_playback_state(access_token)
+        
+        # If there's a currently playing track, get its full details
+        if playback_state.get('item'):
+            track = playback_state['item']
+            # The track object already contains album images and other details
+            print(f"Currently playing: {track.get('name', 'Unknown')} by {', '.join([artist['name'] for artist in track.get('artists', [])])}")
+        
+        return jsonify(playback_state)
+    except Exception as e:
+        print(f"Error getting currently playing: {str(e)}")
+        return jsonify({'error': f'Failed to get currently playing: {str(e)}'}), 500
+
+@api_bp.route('/spotify/play', methods=['POST'])
+def spotify_play():
+    """Play a track on user's Spotify"""
+    print(f"Play track called - session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    # Try to get access token from request body first, then session
+    data = request.get_json() or {}
+    access_token = data.get('access_token') or session.get('spotify_access_token')
+    track_uri = data.get('track_uri')
+    
+    print(f"Access token from request body: {data.get('access_token', 'None')[:20] if data.get('access_token') else 'None'}...")
+    print(f"Access token from session: {session.get('spotify_access_token', 'None')[:20] if session.get('spotify_access_token') else 'None'}...")
+    print(f"Final access token: {access_token[:20] if access_token else 'None'}...")
+    print(f"Track URI: {track_uri}")
+    
+    if not access_token:
+        print("No access token found in request body or session")
+        return jsonify({'error': 'Not authenticated with Spotify'}), 401
+    
+    if not track_uri:
+        return jsonify({'error': 'track_uri is required'}), 400
+    
+    try:
+        spotify_oauth = SpotifyOAuth()
+        
+        print("Trying to add track to queue...")
+        try:
+            result = spotify_oauth.add_to_queue(access_token, track_uri)
+            return jsonify({'message': 'Track added to queue successfully', 'result': result})
+        except Exception as queue_error:
+            print(f"Queue method failed: {str(queue_error)}")
+            print("Trying direct playback method...")
+            try:
+                result = spotify_oauth.start_playback(access_token, track_uri)
+                return jsonify({'message': 'Track playback started successfully', 'result': result})
+            except Exception as playback_error:
+                print(f"Playback method also failed: {str(playback_error)}")
+                raise Exception(f"Both queue and playback methods failed. Queue error: {str(queue_error)}, Playback error: {str(playback_error)}")
+    except Exception as e:
+        print(f"Error playing track: {str(e)}")
+        return jsonify({'error': f'Failed to play track: {str(e)}'}), 500
+
+@api_bp.route('/spotify/start-party', methods=['POST'])
+def spotify_start_party():
+    """Stop current playback, add song to playlist, and start the party song"""
+    print(f"Start party called - session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    # Try to get access token from request body first, then session
+    data = request.get_json() or {}
+    access_token = data.get('access_token') or session.get('spotify_access_token')
+    track_uri = data.get('track_uri')
+    room_code = data.get('room_code')
+    
+    print(f"Access token from request body: {data.get('access_token', 'None')[:20] if data.get('access_token') else 'None'}...")
+    print(f"Access token from session: {session.get('spotify_access_token', 'None')[:20] if session.get('spotify_access_token') else 'None'}...")
+    print(f"Final access token: {access_token[:20] if access_token else 'None'}...")
+    print(f"Track URI: {track_uri}")
+    print(f"Room code: {room_code}")
+    
+    if not access_token:
+        print("No access token found in request body or session")
+        return jsonify({'error': 'Not authenticated with Spotify'}), 401
+    
+    if not track_uri:
+        return jsonify({'error': 'track_uri is required'}), 400
+    
+    try:
+        spotify_oauth = SpotifyOAuth()
+        
+        # Add track to playlist if room_code is provided
+        if room_code and room_code in rooms:
+            playlist_id = rooms[room_code]['playlist_id']
+            print(f"Adding track to playlist {playlist_id}...")
+            try:
+                spotify_oauth.add_tracks_to_playlist(access_token, playlist_id, [track_uri])
+                print("Successfully added track to playlist")
+            except Exception as playlist_error:
+                print(f"Could not add track to playlist: {str(playlist_error)}")
+        
+        print("Pausing current playback...")
+        try:
+            spotify_oauth.pause_playback(access_token)
+            print("Successfully paused current playback")
+        except Exception as pause_error:
+            print(f"Could not pause current playback (might not be playing): {str(pause_error)}")
+        
+        print("Starting party song...")
+        result = spotify_oauth.start_playback(access_token, track_uri)
+        return jsonify({'message': 'Party started successfully!', 'result': result})
+    except Exception as e:
+        print(f"Error starting party: {str(e)}")
+        return jsonify({'error': f'Failed to start party: {str(e)}'}), 500
+
+@api_bp.route('/spotify/skip', methods=['POST'])
+def spotify_skip():
+    """Skip to next track - play highest voted song if available"""
+    print(f"Skip track called - session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    # Try to get access token from request body first, then session
+    data = request.get_json() or {}
+    access_token = data.get('access_token') or session.get('spotify_access_token')
+    room_code = data.get('room_code')
+    
+    print(f"Access token from request body: {data.get('access_token', 'None')[:20] if data.get('access_token') else 'None'}...")
+    print(f"Access token from session: {session.get('spotify_access_token', 'None')[:20] if session.get('spotify_access_token') else 'None'}...")
+    print(f"Final access token: {access_token[:20] if access_token else 'None'}...")
+    print(f"Room code: {room_code}")
+    
+    if not access_token:
+        print("No access token found in request body or session")
+        return jsonify({'error': 'Not authenticated with Spotify'}), 401
+    
+    try:
+        spotify_oauth = SpotifyOAuth()
+        
+        # If room_code is provided, try to get the highest voted song
+        print(f"Room code provided: {room_code}")
+        print(f"Available rooms: {list(rooms.keys())}")
+        print(f"Room exists: {room_code in rooms}")
+        
+        if room_code and room_code in rooms:
+            print("Room found, checking for highest voted song...")
+            
+            # Get the highest voted song
+            room_votes = votes.get(room_code, {})
+            print(f"Room votes: {room_votes}")
+            if room_votes:
+                # Find the song with the highest vote count
+                highest_voted = max(room_votes.items(), key=lambda x: x[1]['count'])
+                track_id, vote_data = highest_voted
+                track_uri = vote_data['track_uri']
+                track_name = vote_data['track_name']
+                vote_count = vote_data['count']
+                
+                print(f"Highest voted song: {track_name} with {vote_count} votes")
+                
+                # Add the highest voted song to the playlist
+                playlist_id = rooms[room_code]['playlist_id']
+                try:
+                    spotify_oauth.add_tracks_to_playlist(access_token, playlist_id, [track_uri])
+                    print(f"Added {track_name} to playlist")
+                except Exception as e:
+                    print(f"Could not add track to playlist: {str(e)}")
+                
+                # Start playing the highest voted song
+                try:
+                    result = spotify_oauth.start_playback(access_token, track_uri)
+                    print(f"Started playing {track_name}")
+                    return jsonify({
+                        'message': f'Playing highest voted song: {track_name}',
+                        'track_name': track_name,
+                        'vote_count': vote_count,
+                        'result': result
+                    })
+                except Exception as e:
+                    print(f"Could not start playback: {str(e)}")
+                    # Fallback to normal skip
+                    result = spotify_oauth.skip_to_next(access_token)
+                    return jsonify({'message': 'Skipped to next track successfully', 'result': result})
+            else:
+                print("No votes found, skipping to next track normally...")
+                result = spotify_oauth.skip_to_next(access_token)
+                return jsonify({'message': 'Skipped to next track successfully', 'result': result})
+        else:
+            print("No room code provided, skipping to next track normally...")
+            result = spotify_oauth.skip_to_next(access_token)
+            return jsonify({'message': 'Skipped to next track successfully', 'result': result})
+            
+    except Exception as e:
+        print(f"Error skipping track: {str(e)}")
+        return jsonify({'error': f'Failed to skip track: {str(e)}'}), 500
+
+@api_bp.route('/vote/<room_code>', methods=['POST'])
+def vote_for_song(room_code):
+    """Vote for a song in a room"""
+    print(f"Vote called - room_code: {room_code}")
+    print(f"Session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    data = request.get_json() or {}
+    track_id = data.get('track_id')
+    track_name = data.get('track_name')
+    track_artist = data.get('track_artist')
+    track_uri = data.get('track_uri')
+    user_id = data.get('user_id', 'anonymous')
+    
+    print(f"Vote data: track_id={track_id}, track_name={track_name}, user_id={user_id}")
+    
+    if not track_id:
+        return jsonify({'error': 'track_id is required'}), 400
+    
+    if room_code not in rooms:
+        return jsonify({'error': 'Room not found'}), 404
+    
+    # Initialize votes for this room if not exists
+    if room_code not in votes:
+        votes[room_code] = {}
+    
+    # Initialize track vote count if not exists
+    if track_id not in votes[room_code]:
+        votes[room_code][track_id] = {
+            'count': 0,
+            'track_name': track_name,
+            'track_artist': track_artist,
+            'track_uri': track_uri,
+            'voters': []
+        }
+    
+    # Add vote
+    votes[room_code][track_id]['count'] += 1
+    votes[room_code][track_id]['voters'].append(user_id)
+    
+    print(f"Vote added. Total votes for {track_name}: {votes[room_code][track_id]['count']}")
+    
+    return jsonify({
+        'message': 'Vote recorded successfully',
+        'track_id': track_id,
+        'vote_count': votes[room_code][track_id]['count']
+    })
+
+@api_bp.route('/votes/<room_code>', methods=['GET'])
+def get_votes(room_code):
+    """Get all votes for a room"""
+    print(f"Get votes called - room_code: {room_code}")
+    
+    if room_code not in rooms:
+        return jsonify({'error': 'Room not found'}), 404
+    
+    room_votes = votes.get(room_code, {})
+    
+    # Convert to list format for frontend
+    vote_list = []
+    for track_id, vote_data in room_votes.items():
+        vote_list.append({
+            'id': track_id,
+            'title': vote_data['track_name'],
+            'artist': vote_data['track_artist'],
+            'uri': vote_data['track_uri'],
+            'votes': vote_data['count']
+        })
+    
+    # Sort by vote count (highest first)
+    vote_list.sort(key=lambda x: x['votes'], reverse=True)
+    
+    return jsonify({
+        'votes': vote_list
+    })
+
+@api_bp.route('/debug/rooms', methods=['GET'])
+def debug_rooms():
+    """Debug endpoint to check rooms and votes"""
+    return jsonify({
+        'rooms': list(rooms.keys()),
+        'votes': {room: list(votes.get(room, {}).keys()) for room in rooms.keys()}
+    })
 
 @api_bp.route('/spotify/logout', methods=['POST'])
 def spotify_logout():

@@ -10,7 +10,7 @@ class SpotifyOAuth:
         self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
         self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
         self.redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:5000/api/spotify/callback')
-        self.scope = 'user-read-private user-read-email user-top-read user-read-recently-played playlist-modify-public playlist-modify-private'
+        self.scope = 'user-read-private user-read-email user-top-read user-read-recently-played playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative user-read-playback-state user-modify-playback-state user-read-currently-playing streaming app-remote-control'
         
         if not self.client_id or not self.client_secret:
             raise ValueError("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables are required")
@@ -136,6 +136,129 @@ class SpotifyOAuth:
             return response.json()
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to get user playlists: {str(e)}")
+    
+    def create_playlist(self, access_token, user_id, name, description="", public=True):
+        """Create a new playlist"""
+        url = f'https://api.spotify.com/v1/users/{user_id}/playlists'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            'name': name,
+            'description': description,
+            'public': public
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to create playlist: {str(e)}")
+    
+    def add_tracks_to_playlist(self, access_token, playlist_id, track_uris):
+        """Add tracks to a playlist"""
+        url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        data = {'uris': track_uris}
+        
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to add tracks to playlist: {str(e)}")
+    
+    def get_playback_state(self, access_token):
+        """Get current playback state"""
+        url = 'https://api.spotify.com/v1/me/player'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to get playback state: {str(e)}")
+    
+    def add_to_queue(self, access_token, track_uri):
+        """Add a track to the queue"""
+        url = 'https://api.spotify.com/v1/me/player/queue'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        params = {'uri': track_uri}
+        
+        try:
+            response = requests.post(url, headers=headers, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to add track to queue: {str(e)}")
+    
+    def start_playback(self, access_token, track_uri=None, device_id=None):
+        """Start playback of a track"""
+        url = 'https://api.spotify.com/v1/me/player/play'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        data = {}
+        if track_uri:
+            data['uris'] = [track_uri]
+        if device_id:
+            data['device_id'] = device_id
+        
+        try:
+            response = requests.put(url, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json() if response.content else {}
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to start playback: {str(e)}")
+    
+    def pause_playback(self, access_token):
+        """Pause current playback"""
+        url = 'https://api.spotify.com/v1/me/player/pause'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        try:
+            response = requests.put(url, headers=headers)
+            response.raise_for_status()
+            # Spotify pause endpoint returns empty response on success
+            if response.status_code == 204 or not response.content.strip():
+                return {'success': True}
+            else:
+                try:
+                    return response.json()
+                except:
+                    return {'success': True}
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to pause playback: {str(e)}")
+    
+    def skip_to_next(self, access_token):
+        """Skip to next track"""
+        url = 'https://api.spotify.com/v1/me/player/next'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        try:
+            response = requests.post(url, headers=headers)
+            response.raise_for_status()
+            # Spotify skip endpoint returns empty response on success
+            if response.status_code == 204 or not response.content.strip():
+                return {'success': True}
+            else:
+                try:
+                    return response.json()
+                except:
+                    return {'success': True}
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to skip to next track: {str(e)}")
     
     def is_token_valid(self, access_token):
         """Check if access token is valid by making a simple API call"""

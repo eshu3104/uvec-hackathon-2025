@@ -33,10 +33,7 @@ const SelectSong = () => {
     const loadTopTracks = async () => {
       try {
         setIsLoading(true);
-        const data = await api.get<{ items: SpotifyTrack[] }>(
-          API_ENDPOINTS.spotifyTopTracks,
-          { params: { limit: 5, time_range: 'short_term' } }
-        );
+        const data = await api.getTopTracks({ limit: 5, time_range: 'short_term' });
         setTopTracks(data.items || []);
       } catch (error) {
         toast({
@@ -65,9 +62,31 @@ const SelectSong = () => {
       )
     : topTracks;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedSong) {
-      navigate("/vote", { state: { lobbyCode, isHost: true, firstSong: selectedSong } });
+      try {
+        setIsLoading(true);
+        
+        // Add song to playlist and start playing it
+        const trackUri = `spotify:track:${selectedSong.id}`;
+        await api.startParty(trackUri, lobbyCode);
+        
+        toast({
+          title: "Party Started!",
+          description: `Now playing: ${selectedSong.name} by ${selectedSong.artists[0].name}`,
+        });
+        
+        // Navigate to voting page
+        navigate("/vote", { state: { lobbyCode, isHost: true, firstSong: selectedSong } });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to start party",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 

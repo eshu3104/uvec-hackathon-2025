@@ -1,7 +1,7 @@
-# Python - Allow cache files for easy cloning
-# __pycache__/
-# *.py[cod]
-# *$py.class
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 *.so
 .Python
 build/
@@ -21,10 +21,10 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environment - Allow venv to be committed
-# venv/
-# env/
-# ENV/
+# Virtual Environment
+venv/
+env/
+ENV/
 
 # Environment variables
 .env
@@ -33,8 +33,8 @@ MANIFEST
 .env.test.local
 .env.production.local
 
-# Node.js - Allow node_modules to be committed
-# node_modules/
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
