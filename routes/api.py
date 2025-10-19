@@ -133,6 +133,43 @@ def debug_session():
         'access_token': session.get('spotify_access_token', 'Not set')[:20] + '...' if session.get('spotify_access_token') else 'Not set'
     })
 
+@api_bp.route('/test-session', methods=['POST'])
+def test_session():
+    """Test endpoint to set and retrieve session data"""
+    data = request.get_json() or {}
+    test_value = data.get('test_value', 'default_test')
+    
+    # Set a test value in session
+    session['test_value'] = test_value
+    session.modified = True
+    
+    return jsonify({
+        'message': 'Session test value set',
+        'session_data': dict(session),
+        'test_value': session.get('test_value')
+    })
+
+@api_bp.route('/test-session', methods=['GET'])
+def get_test_session():
+    """Test endpoint to retrieve session data"""
+    return jsonify({
+        'session_data': dict(session),
+        'test_value': session.get('test_value', 'No test value found')
+    })
+
+@api_bp.route('/test-auth', methods=['GET'])
+def test_auth():
+    """Test endpoint that doesn't require OAuth to check if session works"""
+    # Set a test value
+    session['test_auth'] = 'session_working'
+    session.modified = True
+    
+    return jsonify({
+        'message': 'Session test successful',
+        'session_data': dict(session),
+        'test_auth': session.get('test_auth')
+    })
+
 @api_bp.route('/spotify/callback', methods=['GET'])
 def spotify_callback():
     """Handle Spotify OAuth callback"""
@@ -153,7 +190,7 @@ def spotify_callback():
         
         print(f"Token data received: {list(token_data.keys())}")
         
-        # Store tokens in session
+        # Store tokens in session (for backward compatibility)
         session['spotify_access_token'] = token_data['access_token']
         session['spotify_refresh_token'] = token_data.get('refresh_token')
         session['spotify_token_expires_in'] = token_data.get('expires_in')
@@ -163,9 +200,11 @@ def spotify_callback():
         
         # Force session to be saved
         session.permanent = True
+        session.modified = True
         
-        # Redirect to frontend callback page
-        return redirect('http://localhost:8080/callback')
+        # Redirect to frontend callback page with tokens as URL parameters
+        redirect_url = f"http://localhost:8080/callback?access_token={token_data['access_token']}&refresh_token={token_data.get('refresh_token', '')}&expires_in={token_data.get('expires_in', 3600)}"
+        return redirect(redirect_url)
     except Exception as e:
         print(f"Error in Spotify callback: {str(e)}")
         return jsonify({'error': f'Failed to authenticate: {str(e)}'}), 500
@@ -328,46 +367,41 @@ def spotify_playlists():
 def create_room():
     """Create a new party room with unique code"""
     print(f"Create room called - session data: {dict(session)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"Request headers: {dict(request.headers)}")
     
-    access_token = session.get('spotify_access_token')
-    print(f"Access token from session: {access_token[:20] if access_token else 'None'}...")
+    # Try to get access token from request body first, then session
+    data = request.get_json() or {}
+    access_token = data.get('access_token') or session.get('spotify_access_token')
+    
+    print(f"Access token from request body: {data.get('access_token', 'None')[:20] if data.get('access_token') else 'None'}...")
+    print(f"Access token from session: {session.get('spotify_access_token', 'None')[:20] if session.get('spotify_access_token') else 'None'}...")
+    print(f"Final access token: {access_token[:20] if access_token else 'None'}...")
     
     if not access_token:
-        print("No access token found in session")
+        print("No access token found in request body or session")
         return jsonify({'error': 'Not authenticated with Spotify'}), 401
     
     try:
         spotify_oauth = SpotifyOAuth()
         
-        # Skip token validation for now to test if that's the issue
-        print("Skipping token validation for debugging")
-        
-        # # Check if token is still valid, refresh if needed
-        # if not spotify_oauth.is_token_valid(access_token):
-        #     print("Token validation failed, attempting refresh")
-        #     refresh_token = session.get('spotify_refresh_token')
-        #     if refresh_token:
-        #         try:
-        #             token_data = spotify_oauth.refresh_access_token(refresh_token)
-        #             access_token = token_data['access_token']
-        #             session['spotify_access_token'] = access_token
-        #             if 'refresh_token' in token_data:
-        #                 session['spotify_refresh_token'] = token_data['refresh_token']
-        #         except:
-        #             return jsonify({'error': 'Session expired, please login again'}), 401
-        #     else:
-        #         return jsonify({'error': 'Session expired, please login again'}), 401
+        print("Starting room creation process...")
         
         # Generate unique room code
         room_code = generate_room_code()
+        print(f"Generated room code: {room_code}")
         
         # Get user profile
+        print("Getting user profile...")
         profile = spotify_oauth.get_user_profile(access_token)
         host_user_id = profile['id']
         host_display_name = profile['display_name']
+        print(f"User profile: {host_display_name} ({host_user_id})")
         
         # Create Spotify playlist
+        print("Creating Spotify playlist...")
         playlist = create_spotify_playlist(access_token, room_code)
+        print(f"Playlist created: {playlist['name']}")
         
         # Create room
         room = {
@@ -403,6 +437,9 @@ def create_room():
         }), 201
         
     except Exception as e:
+        print(f"Error in create_room: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': f'Failed to create room: {str(e)}'}), 500
 
 @api_bp.route('/join-room/<room_code>', methods=['POST'])

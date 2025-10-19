@@ -20,7 +20,14 @@ const CreateLobby = () => {
     setError(null);
     
     try {
-      const response: CreateRoomResponse = await api.createRoom();
+      // Get access token from localStorage
+      const accessToken = localStorage.getItem('spotify_access_token');
+      
+      if (!accessToken) {
+        throw new Error('No Spotify access token found. Please login with Spotify first.');
+      }
+      
+      const response: CreateRoomResponse = await api.createRoom(accessToken);
       
       setLobbyCode(response.room_code);
       setPlaylistInfo({

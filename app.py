@@ -12,18 +12,23 @@ def create_app():
     
     # Configure CORS for session-based authentication
     CORS(app, 
-         origins=['http://localhost:8080', 'http://127.0.0.1:8080'],
-         supports_credentials=True)
+         origins=['http://localhost:8080', 'http://127.0.0.1:8080', 'http://localhost:8081', 'http://127.0.0.1:8081', 'http://134.87.58.50:8080', 'http://134.87.58.50:8081'],
+         supports_credentials=True,
+         allow_headers=['Content-Type', 'Authorization'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     
     # Configuration
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-very-long-and-secure-key-for-development-only')
     app.config['DEBUG'] = os.getenv('DEBUG', 'False').lower() == 'true'
     
     # Session configuration for cross-origin authentication
-    app.config['SESSION_COOKIE_DOMAIN'] = 'localhost'
+    app.config['SESSION_COOKIE_DOMAIN'] = None  # Allow all domains in development
     app.config['SESSION_COOKIE_HTTPONLY'] = False  # Allow JavaScript access for debugging
     app.config['SESSION_COOKIE_SECURE'] = False    # Allow HTTP in development
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Allow cross-origin requests
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Use Lax for better compatibility
+    app.config['SESSION_COOKIE_PATH'] = '/'  # Set explicit path
+    app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour
+    # Remove custom session name to use default 'session'
     
     # Register blueprints
     from routes.api import api_bp

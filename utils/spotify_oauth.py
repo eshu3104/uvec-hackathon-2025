@@ -10,7 +10,7 @@ class SpotifyOAuth:
         self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
         self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
         self.redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:5000/api/spotify/callback')
-        self.scope = 'user-read-private user-read-email user-top-read user-read-recently-played'
+        self.scope = 'user-read-private user-read-email user-top-read user-read-recently-played playlist-modify-public playlist-modify-private'
         
         if not self.client_id or not self.client_secret:
             raise ValueError("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables are required")

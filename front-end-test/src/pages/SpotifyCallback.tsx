@@ -12,6 +12,9 @@ const SpotifyCallback = () => {
   useEffect(() => {
     const code = searchParams.get('code');
     const error = searchParams.get('error');
+    const accessToken = searchParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token');
+    const expiresIn = searchParams.get('expires_in');
 
     if (error) {
       setStatus('error');
@@ -26,15 +29,33 @@ const SpotifyCallback = () => {
       return;
     }
 
-    // If we're here without a code, it means the backend successfully processed
-    // the OAuth callback and redirected us here
-    setStatus('success');
-    setMessage('Successfully authenticated with Spotify!');
-    
-    // Redirect to create lobby after a short delay
-    setTimeout(() => {
-      navigate('/create-lobby');
-    }, 1500);
+    // If we have tokens in URL, store them and proceed
+    if (accessToken) {
+      // Store tokens in localStorage
+      localStorage.setItem('spotify_access_token', accessToken);
+      if (refreshToken) {
+        localStorage.setItem('spotify_refresh_token', refreshToken);
+      }
+      if (expiresIn) {
+        localStorage.setItem('spotify_token_expires_in', expiresIn);
+        // Calculate expiration time
+        const expiresAt = Date.now() + (parseInt(expiresIn) * 1000);
+        localStorage.setItem('spotify_token_expires_at', expiresAt.toString());
+      }
+      
+      setStatus('success');
+      setMessage('Successfully authenticated with Spotify!');
+      
+      // Redirect to create lobby after a short delay
+      setTimeout(() => {
+        navigate('/create-lobby');
+      }, 1500);
+      return;
+    }
+
+    // If we're here without tokens, something went wrong
+    setStatus('error');
+    setMessage('Authentication failed - no tokens received');
   }, [searchParams, navigate]);
 
   return (
