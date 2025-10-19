@@ -22,7 +22,7 @@ Built during **Hackathon 2025** by **Team Naan Stop Jam**.
 
 | Layer | Tool | Purpose |
 |-------|------|----------|
-| 🎨 **Frontend** | React + TailwindCSS (Lovable AI) | Beautiful, responsive UI |
+| 🎨 **Frontend** | React + TailwindCSS we are lovable to all pepeople :)| Beautiful, responsive UI |
 | ⚙️ **Backend** | Flask | API handling + Spotify integration |
 | 🗄️ **Database** | Firebase Realtime DB | Store votes & lobby data |
 | 🎵 **API** | Spotify Web API | Fetch & queue songs |
